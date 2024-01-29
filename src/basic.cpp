@@ -13,7 +13,7 @@ bool ready = false;
 #define HEIGHT 720
 cv::Size video_size(WIDTH, HEIGHT);
 cv::Mat video_frame = cv::Mat::zeros(HEIGHT, WIDTH, CV_8UC3);
-cv::VideoWriter video("video_out.mp4", cv::CAP_FFMPEG, cv::VideoWriter::fourcc('h', 'e', 'v', '1'), 200.0, video_size);
+cv::VideoWriter video("video_out.mp4", cv::CAP_FFMPEG, cv::VideoWriter::fourcc('a', 'v', 'c', '1'), 200.0, video_size);
 
 
 void runSimulation(mjModel *model, mjData *data)
