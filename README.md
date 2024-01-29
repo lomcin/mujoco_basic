@@ -8,3 +8,17 @@ Basic MuJoCo simulator and rendering example
 * MuJoCo (included through fetch)
 * GLFW3 (included through fetch)
 * Dear ImGui (included through fetch)
+
+# Build
+To build use the ```build.sh``` script.
+
+```bash
+./build.sh
+```
+
+# Run
+To run use the ```run.sh``` script.
+
+```bash
+./run.sh
+```
