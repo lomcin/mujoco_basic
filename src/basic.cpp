@@ -33,7 +33,7 @@ bool Exit = false;
 #ifdef USE_OPENCV
     cv::Size video_size(WIDTH, HEIGHT);
     cv::Mat video_frame = cv::Mat::zeros(HEIGHT, WIDTH, CV_8UC3);
-    cv::VideoWriter video("video_out.mp4", cv::CAP_FFMPEG, cv::VideoWriter::fourcc('a', 'v', 'c', '1'), 200.0, video_size);
+    cv::VideoWriter video;
 #endif
 
 void runSimulation(mjModel *model, mjData *data)
@@ -165,6 +165,11 @@ int main()
     // Load original model and data
     mjModel *m = mj_loadXML("model/human.xml", NULL, NULL, 0);
     mjData *d = mj_makeData(m);
+    
+    // Set video info the same as the simulation model
+#ifdef USE_OPENCV
+    video.open("video_out.mp4", cv::CAP_FFMPEG, cv::VideoWriter::fourcc('a', 'v', 'c', '1'), 1.0/m->opt.timestep, video_size);
+#endif
 
     // Start simulation and rendering threads
     std::thread simThread(runSimulation, m, d);
