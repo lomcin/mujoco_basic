@@ -4,7 +4,9 @@
 #include <cassert>
 #include <GLFW/glfw3.h>
 #include <mujoco/mujoco.h>
-#include <opencv4/opencv2/opencv.hpp>
+#ifdef USE_OPENCV
+    #include <opencv4/opencv2/opencv.hpp>
+#endif
 
 std::mutex mu, muvideo;
 std::mutex video_frame_mtx;
@@ -27,9 +29,12 @@ bool Exit = false;
 // UHD 4K
 // #define WIDTH 1920*2
 // #define HEIGHT 1080*2
-cv::Size video_size(WIDTH, HEIGHT);
-cv::Mat video_frame = cv::Mat::zeros(HEIGHT, WIDTH, CV_8UC3);
-cv::VideoWriter video("video_out.mp4", cv::CAP_FFMPEG, cv::VideoWriter::fourcc('a', 'v', 'c', '1'), 200.0, video_size);
+
+#ifdef USE_OPENCV
+    cv::Size video_size(WIDTH, HEIGHT);
+    cv::Mat video_frame = cv::Mat::zeros(HEIGHT, WIDTH, CV_8UC3);
+    cv::VideoWriter video("video_out.mp4", cv::CAP_FFMPEG, cv::VideoWriter::fourcc('a', 'v', 'c', '1'), 200.0, video_size);
+#endif
 
 void runSimulation(mjModel *model, mjData *data)
 {
@@ -103,7 +108,11 @@ void render(mjModel *model, mjData *data)
 
         // Get rendered OpenGL frame to video frame
         video_frame_mtx.lock();
+
+#ifdef USE_OPENCV
         mjr_readPixels(video_frame.data, nullptr, render_viewport, &con);
+#endif
+
         video_frame_mtx.unlock();
 
         condvideo.notify_one();
@@ -116,7 +125,10 @@ void render(mjModel *model, mjData *data)
     }
     mjr_restoreBuffer(&con);
     Exit = true;
+
+#ifdef USE_OPENCV
     video.release();
+#endif
 
     // cleanup GLFW and visualization structures
     glfwTerminate();
@@ -135,12 +147,15 @@ void video_thread()
         condv.wait(lock);
 
         video_frame_mtx.lock();
+
+#ifdef USE_OPENCV
         // Convert data | This should be better done in GPU... Maybe using FFMPEG/libavfilter
         cv::flip(video_frame, video_frame, 0);
         cv::cvtColor(video_frame, video_frame, cv::COLOR_RGB2BGR);
 
         // Save it to video file | This step could take advantage from GPU Encoding...  Maybe using FFMPEG/libavutil*
         video.write(video_frame);
+#endif
         video_frame_mtx.unlock();
     }
 }

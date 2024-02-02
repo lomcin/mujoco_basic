@@ -27,7 +27,7 @@
 ################################################
 ##             CMAKE REQUIREMENTS             ##
 ################################################
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.17)
 
 
 
@@ -43,6 +43,40 @@ project(
 
 
 ################################################
+##               PROJECT FLAGS                ##
+################################################
+set(MUJOCO_BASIC_USE_HARDWARE_ENCODING OFF)
+
+
+
+################################################
+##             PROJECT FLAGS LOGIC            ##
+################################################
+
+# Here is the logic: Use CUDA and FFMPEG for video encoding
+# If hardware encoding is set to ON
+if (MUJOCO_BASIC_USE_HARDWARE_ENCODING)
+  set(MUJOCO_BASIC_USE_CUDA ON)
+  set(MUJOCO_BASIC_USE_FFMPEG ON)
+  set(MUJOCO_BASIC_USE_OPENCV OFF)
+  
+  add_compile_definitions(USE_CUDA)
+  add_compile_definitions(USE_FFMPEG)
+
+# Here is the logic: Use OpenCV for video encoding
+# If hardware encoding is set to OFF
+else()
+  set(MUJOCO_BASIC_USE_CUDA OFF)
+  set(MUJOCO_BASIC_USE_FFMPEG OFF)
+  set(MUJOCO_BASIC_USE_OPENCV ON)
+
+  add_compile_definitions(USE_OPENCV)
+
+endif()
+
+
+
+################################################
 ##            INCLUDE FETCH CONTENT           ##
 ################################################
 include(FetchContent)
@@ -54,8 +88,9 @@ include(FetchContent)
 ################################################
 ## Compile as C++11 only in C++ compilation context
 set(CMAKE_CXX_FLAGS
-"${CMAKE_CXX_FLAGS} -std=c++11 -pthread"
+"${CMAKE_CXX_FLAGS} -std=c++11 -pthread -D__STDC_CONSTANT_MACROS"
 )
+
 
 
 ################################################
@@ -68,8 +103,32 @@ find_package(OpenGL REQUIRED)
 ################################################
 ##                  OpenCV                    ##
 ################################################
-find_package( OpenCV REQUIRED )
+# NOTE: OpenCV is just being used for video encoding
+# In the context of SOFTWARE video encoding.
+if (MUJOCO_BASIC_USE_OPENCV)
+  find_package( OpenCV REQUIRED )
+endif()
 
+
+
+################################################
+##                  FFMPEG                    ##
+################################################
+# NOTE: FFMPEG is just being used for video encoding
+# In the context of HARDWARE video encoding.
+if (MUJOCO_BASIC_USE_FFMPEG)
+  include(FindPkgConfig)
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(LIBAV REQUIRED IMPORTED_TARGET
+      libavdevice
+      libavfilter
+      libavformat
+      libavcodec
+      libswresample
+      libswscale
+      libavutil
+  )
+endif()
 
 
 ################################################
@@ -163,11 +222,17 @@ add_executable(
   src/basic.cpp
 )
 
-target_link_libraries(
-  mujoco_basic
-  PUBLIC
-  mujoco
-  OpenGL
-  glfw
-  ${OpenCV_LIBS}
-)
+if (MUJOCO_BASIC_USE_HARDWARE_ENCODING)
+  if (MUJOCO_BASIC_USE_FFMPEG)
+    target_link_libraries(mujoco_basic PkgConfig::LIBAV)
+  endif()
+else()
+  target_link_libraries(
+    mujoco_basic
+    PUBLIC
+    mujoco
+    OpenGL
+    glfw
+    ${OpenCV_LIBS}
+  )
+endif()
