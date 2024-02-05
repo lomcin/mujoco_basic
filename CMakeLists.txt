@@ -46,6 +46,7 @@ project(
 ##               PROJECT FLAGS                ##
 ################################################
 set(MUJOCO_BASIC_USE_HARDWARE_ENCODING OFF)
+set(MUJOCO_BASIC_USE_NUMPY_EXPORT ON)
 
 
 
@@ -74,6 +75,13 @@ else()
 
 endif()
 
+# Here is the logic: Use libnpy for NumPy export
+# If numpy export is set to ON
+if (MUJOCO_BASIC_USE_NUMPY_EXPORT)
+  set(MUJOCO_BASIC_USE_LIBNPY ON)
+  
+  add_compile_definitions(USE_LIBNPY)
+endif()
 
 
 ################################################
@@ -129,6 +137,7 @@ if (MUJOCO_BASIC_USE_FFMPEG)
       libavutil
   )
 endif()
+
 
 
 ################################################
@@ -207,6 +216,32 @@ if(NOT mujoco_POPULATED)
 endif()
 
 
+
+################################################
+##                  LIBNPY                    ##
+################################################
+# NOTE: LIBNPY is just being used for NumPy export
+# In the context of NumPy data export.
+if (MUJOCO_BASIC_USE_LIBNPY)
+  set(LIBNPY_BUILD_TESTING OFF)
+  FetchContent_Declare(
+    libnpy
+    GIT_REPOSITORY https://github.com/matajoh/libnpy.git
+    GIT_TAG        v1.5.2
+  )
+
+  FetchContent_GetProperties(libnpy)
+  if(NOT libnpy_POPULATED)
+    FetchContent_Populate(libnpy)
+    set(libnpy_BUILD_SHARED_LIBS ON)
+    add_subdirectory(
+      ${libnpy_SOURCE_DIR} ${libnpy_BINARY_DIR}
+    )
+  endif()
+endif()
+
+
+
 ################################################
 ##          MUJOCO BASIC INCLUDES             ##
 ################################################
@@ -215,6 +250,7 @@ include_directories(
   ${mujoco_SOURCE_DIR}/include
   ${glfw_SOURCE_DIR}/include
   ${OpenCV_INCLUDE_DIRS}
+  ${LIBNPY_INCLUDE_DIRS}
 )
 
 add_executable(
@@ -234,5 +270,6 @@ else()
     OpenGL
     glfw
     ${OpenCV_LIBS}
+    ${LIBNPY_LIBS}
   )
 endif()
