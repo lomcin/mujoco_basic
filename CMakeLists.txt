@@ -226,14 +226,14 @@ if (MUJOCO_BASIC_USE_LIBNPY)
   set(LIBNPY_BUILD_TESTING OFF)
   FetchContent_Declare(
     libnpy
-    GIT_REPOSITORY https://github.com/matajoh/libnpy.git
-    GIT_TAG        v1.5.2
+    GIT_REPOSITORY https://github.com/jakepoz/libnpy.git
+    GIT_TAG        shared_cmake_fixes
   )
 
   FetchContent_GetProperties(libnpy)
   if(NOT libnpy_POPULATED)
     FetchContent_Populate(libnpy)
-    set(libnpy_BUILD_SHARED_LIBS ON)
+    # set(libnpy_BUILD_SHARED_LIBS ON)
     add_subdirectory(
       ${libnpy_SOURCE_DIR} ${libnpy_BINARY_DIR}
     )
