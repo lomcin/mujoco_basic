@@ -35,6 +35,7 @@ bool save_to_csv = true;
 bool show_plot_figure = true;
 csv::csv_writer *writer = nullptr;
 mjvFigure figure;
+
 // SD
 // #define WIDTH 640
 // #define HEIGHT 480

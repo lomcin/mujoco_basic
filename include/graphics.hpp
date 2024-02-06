@@ -25,6 +25,7 @@ SOFTWARE.
 #ifndef __GRAPHICS__H_
 
 #include <string>
+#include <cstring>
 #include <vector>
 #include <mujoco/mujoco.h>
 
@@ -35,23 +36,39 @@ namespace graphics
         assert(m != nullptr && d != nullptr);
 
         int fi = static_cast<int>(d->time / m->opt.timestep); // naive frame number
-        int i = fi % mjMAXLINEPNT;                            // modulo max points per line
+        int i = std::min(fi, mjMAXLINEPNT - 1);               // points per line
+        double timestamp = m->opt.timestep * static_cast<double>(fi);
+
+        figure->range[0][0] = timestamp - (m->opt.timestep * i);
+        figure->range[0][1] = timestamp;
+
+        for (int q = 0; q < m->nq; ++q)
+            figure->linepnt[q] = i;
 
         for (int q = 0; q < m->nq; ++q)
         {
-            figure->linedata[q][i * 2] = m->opt.timestep * fi;
+            figure->linedata[q][i * 2] = timestamp;
             figure->linedata[q][i * 2 + 1] = d->qpos[q];
         }
 
-        for (int q = 0; q < m->nq; ++q)
-            figure->linepnt[q] = std::min(fi, mjMAXLINEPNT);
+        if (i == mjMAXLINEPNT - 1)
+            for (int q = 0; q < m->nq; ++q)
+                for (int j = 0; j < i; ++j)
+                {
+                    int jj = j * 2;
+                    figure->linedata[q][jj] = figure->linedata[q][jj + 2];
+                    figure->linedata[q][jj + 1] = figure->linedata[q][jj + 3];
+                }
     }
 
     void init_figure(mjvFigure *figure, mjModel *m, std::string title, std::vector<std::string> &headers)
     {
         mjv_defaultFigure(figure);
+        strcpy(figure->title, title.c_str());
         strcpy(figure->xlabel, "Time");
-        const float scale_factor = 1.0/255.0;
+        const float scale_factor = 1.0 / 255.0;
+
+        strcpy(figure->xformat, "%.2lf");
 
         figure->flg_ticklabel[0] = 1;
         figure->flg_ticklabel[1] = 1;
@@ -63,13 +80,16 @@ namespace graphics
         for (int q = 0; q < m->nq; ++q)
         {
             float *rgb = figure->linergb[q];
-            rgb[0] = static_cast<float>(rand() % 256)*scale_factor;
-            rgb[1] = static_cast<float>(rand() % 256)*scale_factor;
-            rgb[2] = static_cast<float>(rand() % 256)*scale_factor;
+            rgb[0] = static_cast<float>(rand() % 256) * scale_factor;
+            rgb[1] = static_cast<float>(rand() % 256) * scale_factor;
+            rgb[2] = static_cast<float>(rand() % 256) * scale_factor;
         }
         for (int q = 0; q < m->nq; ++q)
         {
             strcpy(figure->linename[q], headers[q].c_str());
+
+            // fill with zeros
+            memset(figure->linedata[q], 0, mjMAXLINEPNT);
         }
     }
 }
