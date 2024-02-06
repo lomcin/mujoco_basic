@@ -142,7 +142,7 @@ namespace csv
             {
                 for (size_t i = 0; i < n; ++i)
                 {
-                    append(*val);
+                    append(val[i]);
                 }
             }
         }
