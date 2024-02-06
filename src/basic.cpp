@@ -30,7 +30,8 @@ std::mutex video_frame_mtx;
 std::condition_variable condv, condvideo;
 bool ready = false;
 bool Exit = false;
-
+bool save_to_csv = true;
+csv::csv_writer *writer = nullptr;
 // SD
 #define WIDTH 640
 #define HEIGHT 480
@@ -48,9 +49,9 @@ bool Exit = false;
 // #define HEIGHT 1080*2
 
 #ifdef USE_OPENCV
-    cv::Size video_size(WIDTH, HEIGHT);
-    cv::Mat video_frame = cv::Mat::zeros(HEIGHT, WIDTH, CV_8UC3);
-    cv::VideoWriter video;
+cv::Size video_size(WIDTH, HEIGHT);
+cv::Mat video_frame = cv::Mat::zeros(HEIGHT, WIDTH, CV_8UC3);
+cv::VideoWriter video;
 #endif
 
 void runSimulation(mjModel *model, mjData *data)
@@ -63,6 +64,11 @@ void runSimulation(mjModel *model, mjData *data)
                        { return ready; });
             // Simulation step
             mj_step(model, data);
+            if (save_to_csv && writer)
+            {
+                writer->append(data->time);
+                writer->append(data->qpos, model->nq);
+            }
             ready = false;
         }
         condv.notify_one();
@@ -142,6 +148,8 @@ void render(mjModel *model, mjData *data)
     }
     mjr_restoreBuffer(&con);
     Exit = true;
+    condvideo.notify_one();
+    condv.notify_one();
 
 #ifdef USE_OPENCV
     video.release();
@@ -161,7 +169,7 @@ void video_thread()
     {
         // Wait for new frame to be available from OpenGL
         std::unique_lock<std::mutex> lock(muvideo);
-        condv.wait(lock);
+        condvideo.wait(lock);
 
         video_frame_mtx.lock();
 
@@ -182,10 +190,22 @@ int main()
     // Load original model and data
     mjModel *m = mj_loadXML("model/human.xml", NULL, NULL, 0);
     mjData *d = mj_makeData(m);
-    
+
+    // Saving log to CSV file
+    writer = new csv::csv_writer("log_human.csv");
+    std::vector<std::string> jnt_names = basic::joint_names(m, d);
+
+    std::vector<std::string> headers;
+    headers.push_back("time");
+
+    headers.insert(headers.end(), jnt_names.begin(), jnt_names.end());
+
+    printf("nq %d njnt %d headers %ld\n", m->nq, m->njnt, headers.size());
+    writer->set_headers(headers);
+
     // Set video info the same as the simulation model
 #ifdef USE_OPENCV
-    video.open("video_out.mp4", cv::CAP_FFMPEG, cv::VideoWriter::fourcc('a', 'v', 'c', '1'), 1.0/m->opt.timestep, video_size);
+    video.open("video_out.mp4", cv::CAP_FFMPEG, cv::VideoWriter::fourcc('a', 'v', 'c', '1'), 1.0 / m->opt.timestep, video_size);
 #endif
 
     // Start simulation and rendering threads
@@ -201,6 +221,8 @@ int main()
     // Cleanup
     mj_deleteData(d);
     mj_deleteModel(m);
+
+    delete writer;
 
     return 0;
 }

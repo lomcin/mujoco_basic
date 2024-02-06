@@ -30,8 +30,61 @@ SOFTWARE.
 #include <cassert>
 #include <GLFW/glfw3.h>
 #include <mujoco/mujoco.h>
+#include <csv/csv.hpp>
 #ifdef USE_OPENCV
-    #include <opencv4/opencv2/opencv.hpp>
+#include <opencv4/opencv2/opencv.hpp>
 #endif
+
+namespace basic
+{
+    std::vector<std::string> joint_names(mjModel *m, mjData *d)
+    {
+        assert(m != nullptr && d != nullptr);
+
+        std::vector<std::string> v;
+        v.resize(m->nq);
+        int i = 0;
+
+        for (int j = 0; j < m->njnt; ++j)
+        {
+            if (m->jnt_type[j] == mjJNT_FREE)
+            {
+                const char *name = mj_id2name(m, mjOBJ_JOINT, j);
+                // Cartesian position
+                v[i++].assign(std::string(name) + "_x");
+                v[i++].assign(std::string(name) + "_y");
+                v[i++].assign(std::string(name) + "_z");
+
+                // Quaternion orientation
+                v[i++].assign(std::string(name) + "_qw");
+                v[i++].assign(std::string(name) + "_qx");
+                v[i++].assign(std::string(name) + "_qy");
+                v[i++].assign(std::string(name) + "_qz");
+            }
+            else if (m->jnt_type[j] == mjJNT_BALL)
+            {
+                const char *name = mj_id2name(m, mjOBJ_JOINT, j);
+                // Quaternion orientation
+                v[i++].assign(std::string(name) + "_qw");
+                v[i++].assign(std::string(name) + "_qx");
+                v[i++].assign(std::string(name) + "_qy");
+                v[i++].assign(std::string(name) + "_qz");
+            }
+            else if (m->jnt_type[j] == mjJNT_SLIDE)
+            {
+                const char *name = mj_id2name(m, mjOBJ_JOINT, j);
+                // Sliding position in fixed axis
+                v[i++].assign(std::string(name));
+            }
+            else if (m->jnt_type[j] == mjJNT_HINGE)
+            {
+                const char *name = mj_id2name(m, mjOBJ_JOINT, j);
+                v[i++].assign(std::string(name));
+            }
+        }
+
+        return v;
+    }
+}
 
 #endif // __BASIC__H_

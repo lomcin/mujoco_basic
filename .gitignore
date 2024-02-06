@@ -31,7 +31,11 @@
 *.out
 *.app
 
-
+# Build folder
 build/
 
+# Rendered videos
 *.mp4
+
+# Generated CSV's
+*.csv
